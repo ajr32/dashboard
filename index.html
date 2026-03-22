@@ -8,7 +8,7 @@
     body {
       font-family: system-ui, sans-serif;
       margin: 20px;
-      max-width: 1100px;
+      max-width: 1200px;
     }
 
     table {
@@ -27,16 +27,17 @@
       background: #f5f5f5;
     }
 
-    .risk-green { background-color: #e6f4ea; }
+    .risk-green  { background-color: #e6f4ea; }
     .risk-yellow { background-color: #fff8e1; }
     .risk-orange { background-color: #ffe0b2; }
-    .risk-red { background-color: #ffcccb; }
-    .risk-black { background-color: #e0e0e0; color: #111; }
+    .risk-red    { background-color: #ffcccb; }
+    .risk-black  { background-color: #e0e0e0; color: #111; }
 
     .notes-textarea {
       width: 100%;
-      min-height: 60px;
+      min-height: 120px;   /* Expanded notes field */
       resize: vertical;
+      font-size: 14px;
     }
 
     .controls {
@@ -61,6 +62,7 @@
         <th>Game</th>
         <th>Start Time</th>
         <th>City</th>
+        <th>Roof</th>      <!-- NEW COLUMN -->
         <th>Risk</th>
         <th>Notes</th>
       </tr>
@@ -69,10 +71,20 @@
   </table>
 
 <script>
-  console.log("Using Cloudflare Worker MLB Proxy (team-based city lookup)");
+  console.log("Using Cloudflare Worker MLB Proxy (team-based city lookup + indoor flag)");
 
-  // Worker that injects city/state into the schedule response
   const API_BASE = "https://still-glade-2f65.andrew-rosenthal.workers.dev/?date=";
+
+  // Indoor teams list (home venue)
+  const indoorTeams = [
+    "Houston Astros",
+    "Toronto Blue Jays",
+    "Miami Marlins",
+    "Arizona Diamondbacks",
+    "Tampa Bay Rays",
+    "Texas Rangers",
+    "Milwaukee Brewers"
+  ];
 
   const riskOptions = [
     { value: "", label: "—" },
@@ -97,7 +109,7 @@
 
   async function loadGames(dateStr) {
     const tbody = document.querySelector("#games-table tbody");
-    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
 
     try {
       const res = await fetch(API_BASE + dateStr);
@@ -109,7 +121,8 @@
       tbody.innerHTML = "";
 
       if (!games.length) {
-        tbody.innerHTML = '<tr><td colspan="5">No games found.</td></tr>';
+        tbody.innerHTML =
+          '<tr><td colspan="6">No games found.</td></tr>';
         return;
       }
 
@@ -120,7 +133,7 @@
     } catch (err) {
       console.error(err);
       tbody.innerHTML =
-        '<tr><td colspan="5">Error loading games.</td></tr>';
+        '<tr><td colspan="6">Error loading games.</td></tr>';
     }
   }
 
@@ -132,23 +145,25 @@
     const home = game.teams.home.team.name;
     const startTime = new Date(game.gameDate);
 
-    // These values are injected by the Cloudflare Worker
+    // Values injected by Worker
     const city = game.city || "—";
     const state = game.state || "";
     const cityDisplay = state ? `${city}, ${state}` : city;
+
+    // Indoor?
+    const isIndoor = indoorTeams.includes(home) ? "INDOOR" : "OUTDOOR";
 
     const saved = getSavedState(gameId) || {
       riskLevel: "",
       notes: ""
     };
 
-    // Prevent DOMTokenList error
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
-    // Game matchup cell
+    // Game cell
     const gameCell = document.createElement("td");
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
@@ -166,7 +181,12 @@
     cityCell.textContent = cityDisplay;
     tr.appendChild(cityCell);
 
-    // Risk dropdown cell
+    // Roof cell
+    const roofCell = document.createElement("td");
+    roofCell.textContent = isIndoor;
+    tr.appendChild(roofCell);
+
+    // Risk cell
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
 
