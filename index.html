@@ -15,7 +15,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
-      table-layout: fixed; /* Allows controlled column widths */
+      table-layout: fixed; /* Allows controlled column sizes */
     }
 
     th, td {
@@ -29,9 +29,20 @@
       background: #f5f5f5;
     }
 
-    /* Make Notes column wider */
-    td:nth-child(6), th:nth-child(6) {
-      width: 38%;
+    /* Widen the GAME column */
+    td:nth-child(1), th:nth-child(1) {
+      width: 28%;
+    }
+
+    /* Narrow Roof + Risk columns */
+    td:nth-child(3), th:nth-child(3),
+    td:nth-child(4), th:nth-child(4) {
+      width: 10%;
+    }
+
+    /* Extra wide Notes column */
+    td:nth-child(5), th:nth-child(5) {
+      width: 42%;
     }
 
     .risk-green  { background-color: #e6f4ea; }
@@ -42,8 +53,8 @@
 
     .notes-textarea {
       width: 98%;
-      min-height: 55px; /* Shorter height */
-      resize: vertical; /* User can expand downward */
+      min-height: 55px;
+      resize: vertical;
       font-size: 14px;
     }
 
@@ -68,7 +79,6 @@
       <tr>
         <th>Game</th>
         <th>Start Time</th>
-        <th>City</th>
         <th>Roof</th>
         <th>Risk</th>
         <th>Notes</th>
@@ -78,11 +88,11 @@
   </table>
 
 <script>
-  console.log("Using Cloudflare Worker MLB Proxy (team-based city lookup + indoor flag)");
+  console.log("Using Cloudflare Worker MLB Proxy (indoor flag)");
 
   const API_BASE = "https://still-glade-2f65.andrew-rosenthal.workers.dev/?date=";
 
-  // Indoor teams list — based on home venue
+  // Indoor teams list
   const indoorTeams = [
     "Houston Astros",
     "Toronto Blue Jays",
@@ -110,13 +120,12 @@
     dateInput.value = today;
 
     loadBtn.addEventListener("click", () => loadGames(dateInput.value));
-
     loadGames(today);
   });
 
   async function loadGames(dateStr) {
     const tbody = document.querySelector("#games-table tbody");
-    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
 
     try {
       const res = await fetch(API_BASE + dateStr);
@@ -128,19 +137,16 @@
       tbody.innerHTML = "";
 
       if (!games.length) {
-        tbody.innerHTML =
-          '<tr><td colspan="6">No games found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">No games found.</td></tr>';
         return;
       }
 
-      games.forEach(game => {
-        tbody.appendChild(buildGameRow(game, dateStr));
-      });
+      games.forEach(game => tbody.appendChild(buildGameRow(game, dateStr)));
 
     } catch (err) {
       console.error(err);
       tbody.innerHTML =
-        '<tr><td colspan="6">Error loading games.</td></tr>';
+        '<tr><td colspan="5">Error loading games.</td></tr>';
     }
   }
 
@@ -152,12 +158,7 @@
     const home = game.teams.home.team.name;
     const startTime = new Date(game.gameDate);
 
-    // City/state values injected by the Worker
-    const city = game.city || "—";
-    const state = game.state || "";
-    const cityDisplay = state ? `${city}, ${state}` : city;
-
-    // Indoor or outdoor?
+    // Indoor/Outdoor
     const isIndoor = indoorTeams.includes(home) ? "INDOOR" : "OUTDOOR";
 
     const saved = getSavedState(gameId) || {
@@ -165,18 +166,17 @@
       notes: ""
     };
 
-    // Prevent DOMTokenList crash
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
-    // Game matchup
+    // GAME column
     const gameCell = document.createElement("td");
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
 
-    // Time
+    // TIME column
     const timeCell = document.createElement("td");
     timeCell.textContent = startTime.toLocaleTimeString([], {
       hour: "numeric",
@@ -184,17 +184,12 @@
     });
     tr.appendChild(timeCell);
 
-    // City
-    const cityCell = document.createElement("td");
-    cityCell.textContent = cityDisplay;
-    tr.appendChild(cityCell);
-
-    // Roof (Indoor/Outdoor)
+    // ROOF column
     const roofCell = document.createElement("td");
     roofCell.textContent = isIndoor;
     tr.appendChild(roofCell);
 
-    // Risk dropdown
+    // RISK column
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
 
@@ -208,7 +203,7 @@
 
     select.addEventListener("change", () => {
       const newClass = getRiskClass(select.value);
-      tr.className = ""; // clear previous coloring
+      tr.className = "";
       if (newClass && newClass.trim() !== "") {
         tr.classList.add(newClass);
       }
@@ -218,7 +213,7 @@
     riskCell.appendChild(select);
     tr.appendChild(riskCell);
 
-    // Notes
+    // NOTES column
     const notesCell = document.createElement("td");
     const notesTextarea = document.createElement("textarea");
     notesTextarea.classList.add("notes-textarea");
