@@ -1,3 +1,10 @@
+
+// OLD
+// const venue = game.venue && game.venue.name;
+
+// NEW — get city instead of stadium
+const city = game.venue?.location?.city || "—";
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -75,11 +82,11 @@
 
   const riskOptions = [
     { value: "", label: "—" },
-    { value: "green", label: "Green" },
-    { value: "yellow", label: "Yellow" },
-    { value: "orange", label: "Orange" },
-    { value: "red", label: "Red" },
-    { value: "black", label: "Black" }
+    { value: "green", label: "No issues" },
+    { value: "yellow", label: "Concerns/Monitor" },
+    { value: "orange", label: "Possible Delay" },
+    { value: "red", label: "Likely Delay/Possible Cancel" },
+    { value: "black", label: "Have fun." }
   ];
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -129,7 +136,7 @@
     const gameId = game.gamePk;
     const away = game.teams.away.team.name;
     const home = game.teams.home.team.name;
-    const venue = game.venue && game.venue.name;
+    const city = game.venue?.location?.city || "—";
     const startTime = new Date(game.gameDate);
 
     const saved = getSavedState(gameId) || {
@@ -157,10 +164,10 @@
     tr.appendChild(timeCell);
 
     // Venue cell
-    const venueCell = document.createElement("td");
-    venueCell.textContent = venue || "";
-    tr.appendChild(venueCell);
-
+const cityCell = document.createElement("td");
+cityCell.textContent = city;
+tr.appendChild(cityCell);
+    
     // Risk cell
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
