@@ -69,8 +69,9 @@
   </table>
 
 <script>
-  console.log("Using Cloudflare Worker MLB Proxy");
+  console.log("Using Cloudflare Worker MLB Proxy (team-based city lookup)");
 
+  // Worker that injects city/state into the schedule response
   const API_BASE = "https://still-glade-2f65.andrew-rosenthal.workers.dev/?date=";
 
   const riskOptions = [
@@ -90,6 +91,7 @@
     dateInput.value = today;
 
     loadBtn.addEventListener("click", () => loadGames(dateInput.value));
+
     loadGames(today);
   });
 
@@ -107,8 +109,7 @@
       tbody.innerHTML = "";
 
       if (!games.length) {
-        tbody.innerHTML =
-          '<tr><td colspan="5">No games found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">No games found.</td></tr>';
         return;
       }
 
@@ -131,9 +132,9 @@
     const home = game.teams.home.team.name;
     const startTime = new Date(game.gameDate);
 
-    const city = game.venue?.location?.city || "—";
-    const state = game.venue?.location?.state || "";
-
+    // These values are injected by the Cloudflare Worker
+    const city = game.city || "—";
+    const state = game.state || "";
     const cityDisplay = state ? `${city}, ${state}` : city;
 
     const saved = getSavedState(gameId) || {
@@ -141,15 +142,18 @@
       notes: ""
     };
 
+    // Prevent DOMTokenList error
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
+    // Game matchup cell
     const gameCell = document.createElement("td");
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
 
+    // Time cell
     const timeCell = document.createElement("td");
     timeCell.textContent = startTime.toLocaleTimeString([], {
       hour: "numeric",
@@ -157,10 +161,12 @@
     });
     tr.appendChild(timeCell);
 
+    // City cell
     const cityCell = document.createElement("td");
     cityCell.textContent = cityDisplay;
     tr.appendChild(cityCell);
 
+    // Risk dropdown cell
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
 
@@ -184,6 +190,7 @@
     riskCell.appendChild(select);
     tr.appendChild(riskCell);
 
+    // Notes cell
     const notesCell = document.createElement("td");
     const notesTextarea = document.createElement("textarea");
     notesTextarea.classList.add("notes-textarea");
