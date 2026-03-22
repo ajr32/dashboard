@@ -1,10 +1,3 @@
-
-// OLD
-// const venue = game.venue && game.venue.name;
-
-// NEW — get city instead of stadium
-const city = game.venue?.location?.city || "—";
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -67,7 +60,7 @@ const city = game.venue?.location?.city || "—";
       <tr>
         <th>Game</th>
         <th>Start Time</th>
-        <th>Stadium</th>
+        <th>City</th>
         <th>Risk</th>
         <th>Notes</th>
       </tr>
@@ -82,11 +75,11 @@ const city = game.venue?.location?.city || "—";
 
   const riskOptions = [
     { value: "", label: "—" },
-    { value: "green", label: "No issues" },
-    { value: "yellow", label: "Concerns/Monitor" },
-    { value: "orange", label: "Possible Delay" },
-    { value: "red", label: "Likely Delay/Possible Cancel" },
-    { value: "black", label: "Have fun." }
+    { value: "green", label: "Green" },
+    { value: "yellow", label: "Yellow" },
+    { value: "orange", label: "Orange" },
+    { value: "red", label: "Red" },
+    { value: "black", label: "Black" }
   ];
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -136,26 +129,27 @@ const city = game.venue?.location?.city || "—";
     const gameId = game.gamePk;
     const away = game.teams.away.team.name;
     const home = game.teams.home.team.name;
-    const city = game.venue?.location?.city || "—";
     const startTime = new Date(game.gameDate);
+
+    const city = game.venue?.location?.city || "—";
+    const state = game.venue?.location?.state || "";
+
+    const cityDisplay = state ? `${city}, ${state}` : city;
 
     const saved = getSavedState(gameId) || {
       riskLevel: "",
       notes: ""
     };
 
-    // ⭐ FIX: Only add class if not empty
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
-    // Game cell
     const gameCell = document.createElement("td");
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
 
-    // Time cell
     const timeCell = document.createElement("td");
     timeCell.textContent = startTime.toLocaleTimeString([], {
       hour: "numeric",
@@ -163,12 +157,10 @@ const city = game.venue?.location?.city || "—";
     });
     tr.appendChild(timeCell);
 
-    // Venue cell
-const cityCell = document.createElement("td");
-cityCell.textContent = city;
-tr.appendChild(cityCell);
-    
-    // Risk cell
+    const cityCell = document.createElement("td");
+    cityCell.textContent = cityDisplay;
+    tr.appendChild(cityCell);
+
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
 
@@ -192,7 +184,6 @@ tr.appendChild(cityCell);
     riskCell.appendChild(select);
     tr.appendChild(riskCell);
 
-    // Notes cell
     const notesCell = document.createElement("td");
     const notesTextarea = document.createElement("textarea");
     notesTextarea.classList.add("notes-textarea");
