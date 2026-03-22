@@ -15,7 +15,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
-      table-layout: fixed; /* Allows controlled column sizes */
+      table-layout: fixed; /* Enables column width control */
     }
 
     th, td {
@@ -29,21 +29,13 @@
       background: #f5f5f5;
     }
 
-    /* Widen the GAME column */
-    td:nth-child(1), th:nth-child(1) {
-      width: 28%;
-    }
+    /* Column width assignments using CLASS NAMES */
 
-    /* Narrow Roof + Risk columns */
-    td:nth-child(3), th:nth-child(3),
-    td:nth-child(4), th:nth-child(4) {
-      width: 10%;
-    }
-
-    /* Extra wide Notes column */
-    td:nth-child(5), th:nth-child(5) {
-      width: 42%;
-    }
+    .col-game       { width: 32%; }   /* bigger */
+    .col-start      { width: 12%; }
+    .col-roof       { width: 10%; }   /* narrow */
+    .col-risk       { width: 10%; }   /* narrow */
+    .col-notes      { width: 36%; }   /* wide */
 
     .risk-green  { background-color: #e6f4ea; }
     .risk-yellow { background-color: #fff8e1; }
@@ -77,11 +69,11 @@
   <table id="games-table">
     <thead>
       <tr>
-        <th>Game</th>
-        <th>Start Time</th>
-        <th>Roof</th>
-        <th>Risk</th>
-        <th>Notes</th>
+        <th class="col-game">Game</th>
+        <th class="col-start">Start Time</th>
+        <th class="col-roof">Roof</th>
+        <th class="col-risk">Risk</th>
+        <th class="col-notes">Notes</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -120,6 +112,7 @@
     dateInput.value = today;
 
     loadBtn.addEventListener("click", () => loadGames(dateInput.value));
+
     loadGames(today);
   });
 
@@ -137,7 +130,8 @@
       tbody.innerHTML = "";
 
       if (!games.length) {
-        tbody.innerHTML = '<tr><td colspan="5">No games found.</td></tr>';
+        tbody.innerHTML =
+          '<tr><td colspan="5">No games found.</td></tr>';
         return;
       }
 
@@ -158,7 +152,7 @@
     const home = game.teams.home.team.name;
     const startTime = new Date(game.gameDate);
 
-    // Indoor/Outdoor
+    // Indoor? (based on home team)
     const isIndoor = indoorTeams.includes(home) ? "INDOOR" : "OUTDOOR";
 
     const saved = getSavedState(gameId) || {
@@ -166,31 +160,36 @@
       notes: ""
     };
 
+    // Prevent empty class crash
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
-    // GAME column
+    // === GAME column ===
     const gameCell = document.createElement("td");
+    gameCell.className = "col-game";
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
 
-    // TIME column
+    // === START TIME column ===
     const timeCell = document.createElement("td");
+    timeCell.className = "col-start";
     timeCell.textContent = startTime.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit"
     });
     tr.appendChild(timeCell);
 
-    // ROOF column
+    // === ROOF column ===
     const roofCell = document.createElement("td");
+    roofCell.className = "col-roof";
     roofCell.textContent = isIndoor;
     tr.appendChild(roofCell);
 
-    // RISK column
+    // === RISK column ===
     const riskCell = document.createElement("td");
+    riskCell.className = "col-risk";
     const select = document.createElement("select");
 
     riskOptions.forEach(opt => {
@@ -213,8 +212,9 @@
     riskCell.appendChild(select);
     tr.appendChild(riskCell);
 
-    // NOTES column
+    // === NOTES column ===
     const notesCell = document.createElement("td");
+    notesCell.className = "col-notes";
     const notesTextarea = document.createElement("textarea");
     notesTextarea.classList.add("notes-textarea");
     notesTextarea.value = saved.notes || "";
