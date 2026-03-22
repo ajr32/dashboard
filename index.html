@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>MLB Weather Dashboard</title>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 20px;
+      max-width: 1100px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f5f5f5;
+    }
+
+    .risk-green { background-color: #e6f4ea; }
+    .risk-yellow { background-color: #fff8e1; }
+    .risk-orange { background-color: #ffe0b2; }
+    .risk-red { background-color: #ffcccb; }
+    .risk-black { background-color: #e0e0e0; color: #111; }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 60px;
+      resize: vertical;
+    }
+
+    .controls {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>MLB Weather Dashboard</h2>
+
+  <div class="controls">
+    <label for="game-date">Date:</label>
+    <input type="date" id="game-date" />
+    <button id="load-games">Load Games</button>
+  </div>
+
+  <table id="games-table">
+    <thead>
+      <tr>
+        <th>Game</th>
+        <th>Start Time</th>
+        <th>Stadium</th>
+        <th>Risk</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  console.log("Using Cloudflare Worker MLB Proxy");
+
+  const API_BASE = "https://still-glade-2f65.andrew-rosenthal.workers.dev/?date=";
+
+  const riskOptions = [
+    { value: "", label: "—" },
+    { value: "green", label: "Green" },
+    { value: "yellow", label: "Yellow" },
+    { value: "orange", label: "Orange" },
+    { value: "red", label: "Red" },
+    { value: "black", label: "Black" }
+  ];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const dateInput = document.getElementById("game-date");
+    const loadBtn = document.getElementById("load-games");
+
+    const today = new Date().toISOString().slice(0, 10);
+    dateInput.value = today;
+
+    loadBtn.addEventListener("click", () => loadGames(dateInput.value));
+    loadGames(today);
+  });
+
+  async function loadGames(dateStr) {
+    const tbody = document.querySelector("#games-table tbody");
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+
+    try {
+      const res = await fetch(API_BASE + dateStr);
+      const data = await res.json();
+
+      console.log("Worker response:", data);
+
+      const games = data.dates?.[0]?.games ?? [];
+      tbody.innerHTML = "";
+
+      if (!games.length) {
+        tbody.innerHTML =
+          '<tr><td colspan="5">No games found.</td></tr>';
+        return;
+      }
+
+      games.forEach(game => {
+        tbody.appendChild(buildGameRow(game, dateStr));
+      });
+
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML =
+        '<tr><td colspan="5">Error loading games.</td></tr>';
+    }
+  }
+
+  function buildGameRow(game, dateStr) {
+    const tr = document.createElement("tr");
+
+    const gameId = game.gamePk;
+    const away = game.teams.away.team.name;
+    const home = game.teams.home.team.name;
+    const venue = game.venue && game.venue.name;
+    const startTime = new Date(game.gameDate);
+
+    const saved = getSavedState(gameId) || {
+      riskLevel: "",
+      notes: ""
+    };
+
+    // ⭐ FIX: Only add class if not empty
+    const riskClass = getRiskClass(saved.riskLevel);
+    if (riskClass && riskClass.trim() !== "") {
+      tr.classList.add(riskClass);
+    }
+
+    // Game cell
+    const gameCell = document.createElement("td");
+    gameCell.textContent = `${away} @ ${home}`;
+    tr.appendChild(gameCell);
+
+    // Time cell
+    const timeCell = document.createElement("td");
+    timeCell.textContent = startTime.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+    tr.appendChild(timeCell);
+
+    // Venue cell
+    const venueCell = document.createElement("td");
+    venueCell.textContent = venue || "";
+    tr.appendChild(venueCell);
+
+    // Risk cell
+    const riskCell = document.createElement("td");
+    const select = document.createElement("select");
+
+    riskOptions.forEach(opt => {
+      const option = document.createElement("option");
+      option.value = opt.value;
+      option.textContent = opt.label;
+      if (opt.value === saved.riskLevel) option.selected = true;
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change", () => {
+      const newClass = getRiskClass(select.value);
+      tr.className = "";
+      if (newClass && newClass.trim() !== "") {
+        tr.classList.add(newClass);
+      }
+      saveState(gameId, dateStr, select.value, notesTextarea.value);
+    });
+
+    riskCell.appendChild(select);
+    tr.appendChild(riskCell);
+
+    // Notes cell
+    const notesCell = document.createElement("td");
+    const notesTextarea = document.createElement("textarea");
+    notesTextarea.classList.add("notes-textarea");
+    notesTextarea.value = saved.notes || "";
+
+    notesTextarea.addEventListener("blur", () =>
+      saveState(gameId, dateStr, select.value, notesTextarea.value)
+    );
+
+    notesCell.appendChild(notesTextarea);
+    tr.appendChild(notesCell);
+
+    return tr;
+  }
+
+  function getRiskClass(riskLevel) {
+    return riskLevel ? `risk-${riskLevel}` : "";
+  }
+
+  function getStorageKey(gameId) {
+    return `mlb-weather-${gameId}`;
+  }
+
+  function saveState(gameId, dateStr, riskLevel, notes) {
+    const payload = {
+      gameId,
+      date: dateStr,
+      riskLevel,
+      notes,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem(getStorageKey(gameId), JSON.stringify(payload));
+  }
+
+  function getSavedState(gameId) {
+    const raw = localStorage.getItem(getStorageKey(gameId));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+</script>
+
+</body>
+</html>
