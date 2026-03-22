@@ -32,10 +32,10 @@
     /* Column width assignments using CLASS NAMES */
 
     .col-game       { width: 32%; }   /* bigger */
-    .col-start      { width: 12%; }
+    .col-start      { width: 18%; }
     .col-roof       { width: 10%; }   /* narrow */
     .col-risk       { width: 10%; }   /* narrow */
-    .col-notes      { width: 36%; }   /* wide */
+    .col-notes      { width: 30%; }   /* wide */
 
     .risk-green  { background-color: #e6f4ea; }
     .risk-yellow { background-color: #fff8e1; }
@@ -97,11 +97,11 @@
 
   const riskOptions = [
     { value: "", label: "—" },
-    { value: "green", label: "Green" },
-    { value: "yellow", label: "Yellow" },
-    { value: "orange", label: "Orange" },
-    { value: "red", label: "Red" },
-    { value: "black", label: "Black" }
+    { value: "green", label: "No concerns" },
+    { value: "yellow", label: "Monitor Weather" },
+    { value: "orange", label: "Possible Delay" },
+    { value: "red", label: "Poss PPD/Delay Likely" },
+    { value: "black", label: "Good luck." }
   ];
 
   document.addEventListener("DOMContentLoaded", () => {
