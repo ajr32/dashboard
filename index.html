@@ -8,23 +8,30 @@
     body {
       font-family: system-ui, sans-serif;
       margin: 20px;
-      max-width: 1200px;
+      max-width: 1300px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
+      table-layout: fixed; /* Allows controlled column widths */
     }
 
     th, td {
       border: 1px solid #ddd;
       padding: 6px 8px;
       vertical-align: top;
+      word-wrap: break-word;
     }
 
     th {
       background: #f5f5f5;
+    }
+
+    /* Make Notes column wider */
+    td:nth-child(6), th:nth-child(6) {
+      width: 38%;
     }
 
     .risk-green  { background-color: #e6f4ea; }
@@ -34,9 +41,9 @@
     .risk-black  { background-color: #e0e0e0; color: #111; }
 
     .notes-textarea {
-      width: 100%;
-      min-height: 120px;   /* Expanded notes field */
-      resize: vertical;
+      width: 98%;
+      min-height: 55px; /* Shorter height */
+      resize: vertical; /* User can expand downward */
       font-size: 14px;
     }
 
@@ -62,7 +69,7 @@
         <th>Game</th>
         <th>Start Time</th>
         <th>City</th>
-        <th>Roof</th>      <!-- NEW COLUMN -->
+        <th>Roof</th>
         <th>Risk</th>
         <th>Notes</th>
       </tr>
@@ -75,7 +82,7 @@
 
   const API_BASE = "https://still-glade-2f65.andrew-rosenthal.workers.dev/?date=";
 
-  // Indoor teams list (home venue)
+  // Indoor teams list — based on home venue
   const indoorTeams = [
     "Houston Astros",
     "Toronto Blue Jays",
@@ -145,12 +152,12 @@
     const home = game.teams.home.team.name;
     const startTime = new Date(game.gameDate);
 
-    // Values injected by Worker
+    // City/state values injected by the Worker
     const city = game.city || "—";
     const state = game.state || "";
     const cityDisplay = state ? `${city}, ${state}` : city;
 
-    // Indoor?
+    // Indoor or outdoor?
     const isIndoor = indoorTeams.includes(home) ? "INDOOR" : "OUTDOOR";
 
     const saved = getSavedState(gameId) || {
@@ -158,17 +165,18 @@
       notes: ""
     };
 
+    // Prevent DOMTokenList crash
     const riskClass = getRiskClass(saved.riskLevel);
     if (riskClass && riskClass.trim() !== "") {
       tr.classList.add(riskClass);
     }
 
-    // Game cell
+    // Game matchup
     const gameCell = document.createElement("td");
     gameCell.textContent = `${away} @ ${home}`;
     tr.appendChild(gameCell);
 
-    // Time cell
+    // Time
     const timeCell = document.createElement("td");
     timeCell.textContent = startTime.toLocaleTimeString([], {
       hour: "numeric",
@@ -176,17 +184,17 @@
     });
     tr.appendChild(timeCell);
 
-    // City cell
+    // City
     const cityCell = document.createElement("td");
     cityCell.textContent = cityDisplay;
     tr.appendChild(cityCell);
 
-    // Roof cell
+    // Roof (Indoor/Outdoor)
     const roofCell = document.createElement("td");
     roofCell.textContent = isIndoor;
     tr.appendChild(roofCell);
 
-    // Risk cell
+    // Risk dropdown
     const riskCell = document.createElement("td");
     const select = document.createElement("select");
 
@@ -200,7 +208,7 @@
 
     select.addEventListener("change", () => {
       const newClass = getRiskClass(select.value);
-      tr.className = "";
+      tr.className = ""; // clear previous coloring
       if (newClass && newClass.trim() !== "") {
         tr.classList.add(newClass);
       }
@@ -210,7 +218,7 @@
     riskCell.appendChild(select);
     tr.appendChild(riskCell);
 
-    // Notes cell
+    // Notes
     const notesCell = document.createElement("td");
     const notesTextarea = document.createElement("textarea");
     notesTextarea.classList.add("notes-textarea");
